@@ -3,9 +3,6 @@ import math
 import torch.utils.model_zoo as model_zoo
 import torch
 import numpy as np
-from config import bottle_neck
-
-
 
 
 model_urls = {
@@ -96,8 +93,9 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000):
+    def __init__(self, block, layers, num_classes=1000, neck=False):
         self.inplanes = 64
+        self.bottle_neck = neck
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
@@ -112,7 +110,6 @@ class ResNet(nn.Module):
         self.baselayer = [self.conv1, self.bn1, self.layer1, self.layer2, self.layer3, self.layer4]
         self.bottle = nn.Linear(512 * block.expansion, 256)
         self.cls_fc = nn.Linear(256, num_classes)
-
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -151,42 +148,43 @@ class ResNet(nn.Module):
         x = self.layer4(x)
         x = self.avgpool(x)
         ft = x.view(x.size(0), -1)
-        if bottle_neck:
+        if self.bottle_neck:
             ft = self.bottle(ft)
         x = self.cls_fc(ft)
 
         return ft, x
 
-class DSAN(nn.Module):
 
-    def __init__(self, num_classes=3):
-        super(DSAN, self).__init__()
-        self.feature_layers = resnet(False)
+def resnet18(pretrained=False, **kwargs):
+    """Constructs a ResNet-50 model.
 
-        if bottle_neck:
-            self.bottle = nn.Linear(512, 256)
-            self.cls_fc = nn.Linear(256, num_classes)
-        else:
-            self.cls_fc = nn.Linear(512, num_classes)
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
+    return model
 
+def resnet34(pretrained=False, **kwargs):
+    """Constructs a ResNet-50 model.
 
-    def forward(self, source, target, s_label,t_label):
-        source = self.feature_layers(source)
-        if bottle_neck:
-            source = self.bottle(source)
-        s_pred = self.cls_fc(source)
-        if self.training ==True:
-            target = self.feature_layers(target)
-            if bottle_neck:
-                target = self.bottle(target)
-            t_pred = self.cls_fc(target)
-            loss = mmd.lmmd(source, target, s_label, t_label)
-        else:
-            t_pred = s_pred
-            loss = 0
-        return s_pred, t_pred, loss, source, target
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
+    """
+    model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
+    if pretrained:
+        pretrained_dict = model_zoo.load_url(model_urls['resnet34']) #把预训练模型的参数导入进来
+        model_dict = model.state_dict()#自己新定义网络的参数
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        # 将pretrained_dict里不属于model_dict的键剔除掉 ，因为后面的cnn.load_state_dict()方法有个重要参数是strict，默认是True，
+        # 表示预训练模型的层和自己定义的网络结构层严格对应相等（比如层名和维度）。
+        model_dict.update(pretrained_dict) # 更新现有的model_dict
+        model.load_state_dict(model_dict) 
+        # model.load_state_dict(model_zoo.load_url())
+    return model
 
-def resnet(pretrained=False, **kwargs):
+def resnet50(pretrained=False, **kwargs):
     """Constructs a ResNet-50 model.
 
     Args:
@@ -194,5 +192,5 @@ def resnet(pretrained=False, **kwargs):
     """
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
+        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
