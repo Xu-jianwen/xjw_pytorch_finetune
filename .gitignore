@@ -26,6 +26,16 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.pkl
+*.pth
+*.log
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
