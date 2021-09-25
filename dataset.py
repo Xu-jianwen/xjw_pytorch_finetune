@@ -24,10 +24,11 @@ def Generate_transform_Dict(origin_width=256, width=227, ratio=0.16):
     transforms.Compose([
                 # transforms.CovertBGR(),
                 transforms.Resize([origin_width, origin_width]),
-                transforms.RandomResizedCrop(scale=(ratio, 1), size=width),
+                transforms.RandomResizedCrop(width),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+                # normalize, 
                ])
 
     transform_dict['center-crop'] = \
@@ -42,9 +43,10 @@ def Generate_transform_Dict(origin_width=256, width=227, ratio=0.16):
     transform_dict['resize'] = \
     transforms.Compose([
                     # transforms.CovertBGR(),
-                    transforms.Resize([origin_width, origin_width]),
+                    transforms.Resize([width, width]),
                     transforms.ToTensor(),
                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+                    # normalize, 
                 ])
     return transform_dict
 
@@ -105,18 +107,18 @@ class MyData(data.Dataset):
 
 
 class ship_dataset:
-    def __init__(self, width=224, origin_width=256, ratio=0.16, root=None, transform=None):
-        print('width: \t {}'.format(width))
-        transform_Dict = Generate_transform_Dict(origin_width=origin_width, width=width, ratio=ratio)
+    def __init__(self, width=224, origin_width=256, root=None, transform=None):
+        # print('width: \t {}'.format(width))
+        transform_Dict = Generate_transform_Dict(origin_width=origin_width, width=width)
         if root is None:
-            # root = "/home/pc001/jianwen/data/ship28"
-            root = "D:\RS_Dataset\ORS\Ship28_cropped"
+            root = "/home/pc001/jianwen/data/ship28"
+            # root = "D:\RS_Dataset\ORS\Ship28_cropped"
 
         train_txt = os.path.join(root, 'train.txt')
         test_txt = os.path.join(root, 'test.txt')
 
         self.train = MyData(root, label_txt=train_txt, transform=transform_Dict['rand-crop'])
-        self.test = MyData(root, label_txt=test_txt, transform=transform_Dict['center-crop'])
+        self.test = MyData(root, label_txt=test_txt, transform=transform_Dict['resize'])
 
 
 def testCUB_200_2011():

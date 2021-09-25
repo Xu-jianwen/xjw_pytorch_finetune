@@ -93,9 +93,8 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000, neck=False):
+    def __init__(self, block, layers, num_classes=1000):
         self.inplanes = 64
-        self.bottle_neck = neck
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                bias=False)
@@ -108,8 +107,8 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(7, stride=1)
         self.baselayer = [self.conv1, self.bn1, self.layer1, self.layer2, self.layer3, self.layer4]
-        self.bottle = nn.Linear(512 * block.expansion, 256)
-        self.cls_fc = nn.Linear(256, num_classes)
+        # self.bottle = nn.Linear(512 * block.expansion, 256)
+        self.cls_fc = nn.Linear(512 * block.expansion, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -148,8 +147,6 @@ class ResNet(nn.Module):
         x = self.layer4(x)
         x = self.avgpool(x)
         ft = x.view(x.size(0), -1)
-        if self.bottle_neck:
-            ft = self.bottle(ft)
         x = self.cls_fc(ft)
 
         return ft, x
@@ -174,14 +171,12 @@ def resnet34(pretrained=False, **kwargs):
     """
     model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
     if pretrained:
-        pretrained_dict = model_zoo.load_url(model_urls['resnet34']) #把预训练模型的参数导入进来
-        model_dict = model.state_dict()#自己新定义网络的参数
+        pretrained_dict = model_zoo.load_url(model_urls['resnet34'])
+        model_dict = model.state_dict()
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-        # 将pretrained_dict里不属于model_dict的键剔除掉 ，因为后面的cnn.load_state_dict()方法有个重要参数是strict，默认是True，
-        # 表示预训练模型的层和自己定义的网络结构层严格对应相等（比如层名和维度）。
-        model_dict.update(pretrained_dict) # 更新现有的model_dict
+        model_dict.update(pretrained_dict)
         model.load_state_dict(model_dict) 
-        # model.load_state_dict(model_zoo.load_url())
+        # model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
     return model
 
 def resnet50(pretrained=False, **kwargs):
@@ -192,5 +187,10 @@ def resnet50(pretrained=False, **kwargs):
     """
     model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
+        pretrained_dict = model_zoo.load_url(model_urls['resnet50'])
+        model_dict = model.state_dict()
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict) 
+        # model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
     return model
