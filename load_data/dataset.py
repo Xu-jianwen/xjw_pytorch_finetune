@@ -9,14 +9,14 @@ import torchvision.transforms as T
 
 
 def build_transforms(mode="RGB", is_train=True):
-    normMean = [0.4948052, 0.48568845, 0.44682974]  # 第一行
-    normStd = [0.24580306, 0.24236229, 0.2603115]  # 第二行
+    # normMean = [0.4948052, 0.48568845, 0.44682974]  # 第一行
+    # normStd = [0.24580306, 0.24236229, 0.2603115]  # 第二行
     if mode == "BGR":
         normalize_transform = T.Normalize(
             mean=[104.0 / 255, 117.0 / 255, 128.0 / 255], std=3 * [1.0 / 255]
         )
     else:
-        normalize_transform = T.Normalize(mean=normMean, std=normStd)
+        normalize_transform = T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     if is_train:
         transform = T.Compose(
             [
@@ -29,7 +29,12 @@ def build_transforms(mode="RGB", is_train=True):
         )
     else:
         transform = T.Compose(
-            [T.Resize(size=256), T.CenterCrop(224), T.ToTensor(), normalize_transform]
+            [
+                T.Resize(size=224),
+                # T.CenterCrop(224),
+                T.ToTensor(),
+                normalize_transform,
+            ]
         )
     return transform
 
