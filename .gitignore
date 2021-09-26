@@ -37,6 +37,8 @@ MANIFEST
 *.tar.gz
 *.rar
 *.out
+runs/
+.vscode/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
