@@ -1,8 +1,11 @@
 import torch.nn as nn
 import math
-import torch.utils.model_zoo as model_zoo
-import torch
-import numpy as np
+import torchvision.transforms as transforms
+from PIL import Image
+from torch.utils import model_zoo
+
+
+__all__ = ['ResNet', 'resnet']
 
 
 model_urls = {
@@ -93,7 +96,7 @@ class Bottleneck(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000):
+    def __init__(self, block, layers, dim=256, num_classes=3, embedding=True):
         self.inplanes = 64
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -102,13 +105,19 @@ class ResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
+        for p in self.parameters():
+            p.requires_grad = False
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(7, stride=1)
+        self.embeddings = nn.Linear(512 * block.expansion, dim)
+        self.embedding = embedding
+        if self.embedding:
+            self.classifier = nn.Linear(dim, num_classes)
+        else:
+            self.classifier = nn.Linear(512 * block.expansion, num_classes)
         self.baselayer = [self.conv1, self.bn1, self.layer1, self.layer2, self.layer3, self.layer4]
-        # self.bottle = nn.Linear(512 * block.expansion, 256)
-        self.cls_fc = nn.Linear(512 * block.expansion, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -139,58 +148,56 @@ class ResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x = self.maxpool(x)
+        x0 = self.maxpool(x)
+        x1 = self.layer1(x0)
+        x2 = self.layer2(x1)
+        x3 = self.layer3(x2)
+        x4 = self.layer4(x3)
+        x5 = self.avgpool(x4)
+        ft = x5.view(x5.size(0), -1)
+        if self.embedding:
+            ft = self.embeddings(ft)
+        output = self.classifier(ft)
 
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        x = self.avgpool(x)
-        ft = x.view(x.size(0), -1)
-        x = self.cls_fc(ft)
-
-        return ft, x
+        return ft, output
 
 
-def resnet18(pretrained=False, **kwargs):
-    """Constructs a ResNet-50 model.
+def resnet(model_name,pretrained, embedding=True, dim=256, num_class=3):
 
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
-    if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
-    return model
+    residual_block = {
+        'resnet18': BasicBlock,
+        'resnet34': BasicBlock,
+        'resnet50': Bottleneck,
+        'resnet101': Bottleneck,
+    }
 
-def resnet34(pretrained=False, **kwargs):
-    """Constructs a ResNet-50 model.
+    num_blocks = {
+        'resnet18': [2, 2, 2, 2],
+        'resnet34': [3, 4, 6, 3],
+        'resnet50': [3, 4, 6, 3],
+        'resnet101': [3, 4, 23, 3],
+    }
 
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    model = ResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
-    if pretrained:
-        pretrained_dict = model_zoo.load_url(model_urls['resnet34'])
+    model = ResNet(residual_block[model_name], num_blocks[model_name],
+                   embedding=embedding, dim=dim, num_classes=num_class)
+    url = model_urls[model_name]
+    if pretrained is True:
         model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(url)
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
         model_dict.update(pretrained_dict)
-        model.load_state_dict(model_dict) 
-        # model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
+        model.load_state_dict(model_dict)
+
     return model
 
-def resnet50(pretrained=False, **kwargs):
-    """Constructs a ResNet-50 model.
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    model = ResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
-    if pretrained:
-        pretrained_dict = model_zoo.load_url(model_urls['resnet50'])
-        model_dict = model.state_dict()
-        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-        model_dict.update(pretrained_dict)
-        model.load_state_dict(model_dict) 
-        # model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
-    return model
+if __name__ == '__main__':
+    model = resnet('resnet18')
+    model.cuda()
+    print(model)
+    img = Image.open('/home/jianwen/code/datasets/CUB_200_2011/train/001.Black_footed_Albatross/Black_Footed_Albatross_0002_55.jpg')
+    img = transforms.ToTensor()(img)
+    img = transforms.Resize([224, 224])(img)
+    img = img.unsqueeze(0)
+    img = img.cuda()
+    out = model(img)
+    print(out.data)

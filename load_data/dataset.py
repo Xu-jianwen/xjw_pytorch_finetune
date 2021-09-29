@@ -20,8 +20,8 @@ def build_transforms(mode="RGB", is_train=True):
     if is_train:
         transform = T.Compose(
             [
-                T.Resize([256, 256]),
-                T.RandomResizedCrop(size=224),
+                # T.Resize([256, 256]),
+                T.RandomResizedCrop(224),
                 T.RandomHorizontalFlip(),
                 T.ToTensor(),
                 normalize_transform,
@@ -30,7 +30,7 @@ def build_transforms(mode="RGB", is_train=True):
     else:
         transform = T.Compose(
             [
-                T.Resize(size=224),
+                T.Resize([224, 224]),
                 # T.CenterCrop(224),
                 T.ToTensor(),
                 normalize_transform,
