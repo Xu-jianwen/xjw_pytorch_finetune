@@ -1,9 +1,10 @@
 from __future__ import print_function
+from efficientnet_pytorch.utils import efficientnet
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.utils
-import os
+import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 import time
 import argparse
@@ -13,9 +14,10 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import confusion_matrix
 from confusion_matrix import Confusion_Matrix
 from util import tsne_feature_visualization, D2_images_sar_plot, set_bn_eval
+from efficientnet_pytorch import EfficientNet, model
 
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 torch.backends.cudnn.benchmark = True
 
 
@@ -28,7 +30,9 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
         Loss, train_correct = 0, 0
         for idx, (data, target) in enumerate(train_loader):
             img, label = data.to(device), target.to(device)
-            feature, output = model(img)
+            # feature, output = model(img)
+            ft, logits = model(img)
+            output = proxies_reducer(args.num_centers, logits)
             predictions = torch.max(output, dim=1)[1]
             train_correct += predictions.eq(label.data.view_as(predictions)).sum()
             loss = criterion(output, label)
@@ -55,7 +59,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
             len_test_dataset,
             test_loss,
             test_acc,
-        ) = test(model, test_loader, criterion, device)
+        ) = test(args, model, test_loader, criterion, device)
         writer.add_scalar("Test/Loss", test_loss, epoch)
         writer.add_scalar("Test/Acc", test_acc, epoch)
         print(
@@ -78,13 +82,15 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
 
 
 @torch.no_grad()
-def test(model, test_loader, criterion, device):
+def test(args, model, test_loader, criterion, device):
     model.eval()
     test_correct, Test_Loss = 0, 0
     test_pred, test_true = [], []
     for data, target in test_loader:
         img, label = data.to(device), target.to(device)
-        feature, output = model(img)
+        # feature, output = model(img)
+        ft, logits = model(img)
+        output = proxies_reducer(args.num_centers, logits)
         test_loss = criterion(output, label)
         predictions = torch.max(output, dim=1)[1]
         test_pred.append(predictions)
@@ -103,11 +109,19 @@ def test(model, test_loader, criterion, device):
     )
 
 
+def proxies_reducer(num_centers, logit):
+    logit = logit.view(-1, len(train_loader.dataset.classes), num_centers)
+    prob = F.softmax(logit * 0.1, dim=2)
+    sim_to_classes = torch.sum(prob * logit, dim=2)
+    return sim_to_classes
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a CNN")
     parser.add_argument("--model_name", help="model", default="resnet50", type=str)
     parser.add_argument("--embedding_size", help="model", default="256", type=int)
     parser.add_argument("--embedding", help="model", default=True, type=bool)
+    parser.add_argument("--num_centers", help="model", default=5, type=int)
     parser.add_argument("--cuda_id", help="cuda id", default="1", type=str)
     parser.add_argument(
         "--data_root",
@@ -116,11 +130,11 @@ if __name__ == "__main__":
         type=str,
     )
     parser.add_argument("--dataset", help="dataset", default="FGSC23", type=str)
-    parser.add_argument("--lr", help="learning rate", default=1e-3, type=float)
+    parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)
     parser.add_argument("--epochs", help="num_epochs", default=400, type=int)
-    parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
+    parser.add_argument("--batch_size", help="batch_size", default=64, type=int)
     parser.add_argument("--workers", help="workers of dataloader", default=4, type=int)
     args = parser.parse_args()
 
@@ -130,18 +144,20 @@ if __name__ == "__main__":
     train_loader = build.build_data(args, is_train=True)
     test_loader = build.build_data(args, is_train=False)
 
-    # model = backbones.ResNet.resnet50(
-    #     pretrained=True, num_classes=len(train_loader.dataset.classes)
-    # )
-    model = backbones.create(name=args.model_name, pretrained=True, model_name=args.model_name,
-                             dim=args.embedding_size, num_class=len(train_loader.dataset.classes), embedding=args.embedding)
+    model = backbones.create(
+        name=args.model_name,
+        pretrained=True,
+        model_name=args.model_name,
+        dim=args.embedding_size,
+        num_class=len(train_loader.dataset.classes) * args.num_centers,
+        embedding=args.embedding,
+    )
     model.to(device)
-    # print(model)
     # model = nn.DataParallel(model)
 
     criterion = nn.CrossEntropyLoss()
-    # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.decay)
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.decay, momentum=args.momentum)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.decay)
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.decay, momentum=args.momentum)
 
     since = time.time()
     finetune(args, model, train_loader, test_loader, criterion, optimizer, device)
