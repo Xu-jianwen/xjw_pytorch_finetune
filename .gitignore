@@ -26,6 +26,19 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.pkl
+*.pth
+*.log
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+*.out
+runs/
+.vscode/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -127,3 +140,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+#figures
+*.png
+*.jpg
+*.bmp
