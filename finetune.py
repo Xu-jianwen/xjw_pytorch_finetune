@@ -1,5 +1,5 @@
 from __future__ import print_function
-from efficientnet_pytorch.utils import efficientnet
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -12,12 +12,9 @@ import backbones
 from load_data import build
 from torch.utils.data import DataLoader
 from sklearn.metrics import confusion_matrix
-from confusion_matrix import Confusion_Matrix
-from util import tsne_feature_visualization, D2_images_sar_plot, set_bn_eval
-from efficientnet_pytorch import EfficientNet, model
+from util import cm_plot, tsne_feature_visualization, D2_images_sar_plot, set_bn_eval
 
 
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 torch.backends.cudnn.benchmark = True
 
 
@@ -32,7 +29,10 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
             img, label = data.to(device), target.to(device)
             # feature, output = model(img)
             ft, logits = model(img)
-            output = proxies_reducer(args.num_centers, logits)
+            if args.num_centers is not None:
+                output = proxies_reducer(args.num_centers, logits)
+            else:
+                output = logits
             predictions = torch.max(output, dim=1)[1]
             train_correct += predictions.eq(label.data.view_as(predictions)).sum()
             loss = criterion(output, label)
@@ -40,6 +40,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            # scheduler.step()
 
             Loss += loss.item() * data.size(0)
 
@@ -78,7 +79,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
     pred_label = torch.hstack(test_pred)
     cm = confusion_matrix(true_label.data.cpu().numpy(), pred_label.data.cpu().numpy())
     classes = test_loader.dataset.classes
-    Confusion_Matrix(num_classes=len(classes), label=classes, matrix=cm)
+    cm_plot(num_classes=len(classes), label=classes, matrix=cm)
 
 
 @torch.no_grad()
@@ -90,7 +91,10 @@ def test(args, model, test_loader, criterion, device):
         img, label = data.to(device), target.to(device)
         # feature, output = model(img)
         ft, logits = model(img)
-        output = proxies_reducer(args.num_centers, logits)
+        if args.num_centers is not None:
+            output = proxies_reducer(args.num_centers, logits)
+        else:
+            output = logits
         test_loss = criterion(output, label)
         predictions = torch.max(output, dim=1)[1]
         test_pred.append(predictions)
@@ -119,9 +123,9 @@ def proxies_reducer(num_centers, logit):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a CNN")
     parser.add_argument("--model_name", help="model", default="resnet50", type=str)
-    parser.add_argument("--embedding_size", help="model", default="256", type=int)
+    parser.add_argument("--embedding_size", help="model", default="512", type=int)
     parser.add_argument("--embedding", help="model", default=True, type=bool)
-    parser.add_argument("--num_centers", help="model", default=5, type=int)
+    parser.add_argument("--num_centers", help="model", default=None)
     parser.add_argument("--cuda_id", help="cuda id", default="1", type=str)
     parser.add_argument(
         "--data_root",
@@ -129,27 +133,32 @@ if __name__ == "__main__":
         default="/home/xjw/jianwen/data/",
         type=str,
     )
-    parser.add_argument("--dataset", help="dataset", default="FGSC23", type=str)
+    parser.add_argument("--dataset", help="dataset", default="chips", type=str)
     parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)
     parser.add_argument("--epochs", help="num_epochs", default=400, type=int)
-    parser.add_argument("--batch_size", help="batch_size", default=64, type=int)
+    parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
     parser.add_argument("--workers", help="workers of dataloader", default=4, type=int)
     args = parser.parse_args()
 
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda_id
     device = "cuda" if torch.cuda.is_available() else "cpu"
     writer = SummaryWriter()
 
     train_loader = build.build_data(args, is_train=True)
     test_loader = build.build_data(args, is_train=False)
 
+    if args.num_centers is None:
+        num_centers = 1
+    else:
+        num_centers = args.num_centers
     model = backbones.create(
         name=args.model_name,
         pretrained=True,
         model_name=args.model_name,
         dim=args.embedding_size,
-        num_class=len(train_loader.dataset.classes) * args.num_centers,
+        num_class=len(train_loader.dataset.classes) * num_centers,
         embedding=args.embedding,
     )
     model.to(device)
@@ -158,6 +167,7 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.decay)
     # optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.decay, momentum=args.momentum)
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 500], gamma=0.1)
 
     since = time.time()
     finetune(args, model, train_loader, test_loader, criterion, optimizer, device)

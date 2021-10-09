@@ -9,8 +9,6 @@ import torchvision.transforms as T
 
 
 def build_transforms(mode="RGB", is_train=True):
-    # normMean = [0.4948052, 0.48568845, 0.44682974]  # 第一行
-    # normStd = [0.24580306, 0.24236229, 0.2603115]  # 第二行
     if mode == "BGR":
         normalize_transform = T.Normalize(
             mean=[104.0 / 255, 117.0 / 255, 128.0 / 255], std=3 * [1.0 / 255]

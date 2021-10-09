@@ -39,7 +39,7 @@ def set_bn_eval(m):
         m.eval()
 
 
-def cm_plot(num_classes, label, matrix):
+def cm_plot(num_classes, label, matrix, fig_name=None):
 
     print(matrix)
     plt.imshow(matrix, cmap=plt.cm.Blues)
@@ -69,7 +69,7 @@ def cm_plot(num_classes, label, matrix):
                 color="white" if info > thresh else "black",
             )
     plt.tight_layout()
-    plt.savefig("confusion_matrix.png", dpi=300)
+    plt.savefig(fig_name + "confusion_matrix.png", dpi=300)
     plt.show()
 
 

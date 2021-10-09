@@ -105,18 +105,24 @@ class ResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
-        for p in self.parameters():
-            p.requires_grad = False
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(7, stride=1)
         self.embeddings = nn.Linear(512 * block.expansion, dim)
         self.embedding = embedding
+        self.cls_fc = nn.Linear(512 * block.expansion, num_classes),
         if self.embedding:
-            self.classifier = nn.Linear(dim, num_classes, bias=False)
+            self.classifier = nn.Sequential(
+                nn.ReLU(inplace=True),
+                nn.Linear(dim, num_classes, bias=False),
+            )
         else:
-            self.classifier = nn.Linear(512 * block.expansion, num_classes, bias=False)
+            self.classifier = nn.Sequential(
+                nn.ReLU(inplace=True),
+                nn.Linear(512 * block.expansion, num_classes, bias=False),
+            )
+
         self.baselayer = [
             self.conv1,
             self.bn1,
@@ -169,8 +175,9 @@ class ResNet(nn.Module):
         ft = x5.view(x5.size(0), -1)
         if self.embedding:
             ft = self.embeddings(ft)
-        ft = nn.functional.normalize(ft, p=2, dim=1)
+        # ft = nn.functional.normalize(ft, p=2, dim=1)
         output = self.classifier(ft)
+        # output = self.cls_fc(ft)
 
         return ft, output
 
