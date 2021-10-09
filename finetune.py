@@ -12,7 +12,7 @@ import backbones
 from load_data import build
 from torch.utils.data import DataLoader
 from sklearn.metrics import confusion_matrix
-from util import cm_plot, tsne_feature_visualization, D2_images_sar_plot, set_bn_eval
+from util import cm_plot, tsne_feature_visualization, tsne_plot, set_bn_eval
 
 
 torch.backends.cudnn.benchmark = True
@@ -73,6 +73,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
             best_model = model
             print("Best acc :{:.2f}%, at Epoch {}".format(best_acc, epoch))
         else:
+            # best_model = best_model
             print("Best acc is :{:.2f}%".format(best_acc))
     torch.save(best_model, args.dataset + "_best_model.pth")
     true_label = torch.hstack(test_true)
@@ -133,11 +134,11 @@ if __name__ == "__main__":
         default="/home/xjw/jianwen/data/",
         type=str,
     )
-    parser.add_argument("--dataset", help="dataset", default="chips", type=str)
+    parser.add_argument("--dataset", help="dataset", default="mbr", type=str)
     parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)
-    parser.add_argument("--epochs", help="num_epochs", default=400, type=int)
+    parser.add_argument("--epochs", help="num_epochs", default=200, type=int)
     parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
     parser.add_argument("--workers", help="workers of dataloader", default=4, type=int)
     args = parser.parse_args()
@@ -167,7 +168,9 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.decay)
     # optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.decay, momentum=args.momentum)
-    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[10, 500], gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(
+        optimizer, milestones=[10, 500], gamma=0.1
+    )
 
     since = time.time()
     finetune(args, model, train_loader, test_loader, criterion, optimizer, device)

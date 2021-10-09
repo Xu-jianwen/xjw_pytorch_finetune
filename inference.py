@@ -16,7 +16,7 @@ parser.add_argument(
     default="/home/xjw/jianwen/data/",
     type=str,
 )
-parser.add_argument("--dataset", help="dataset", default="chips", type=str)
+parser.add_argument("--dataset", help="dataset", default="mbr_bgd", type=str)
 parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
 parser.add_argument("--workers", help="workers of dataloader", default=2, type=int)
 args = parser.parse_args()
@@ -26,7 +26,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 test_loader = build.build_data(args, is_train=False)
 
-model = torch.load("chips_best_model.pth")
+model = torch.load("mbr_bgd_best_model.pth")
 model.to(device)
 
 
@@ -50,4 +50,6 @@ with torch.no_grad():
     pred_label = torch.hstack(test_pred)
     cm = confusion_matrix(true_label.data.cpu().numpy(), pred_label.data.cpu().numpy())
     classes = test_loader.dataset.classes
-    cm_plot(num_classes=len(classes), label=classes, matrix=cm, fig_name=args.dataset + "_")
+    cm_plot(
+        num_classes=len(classes), label=classes, matrix=cm, fig_name=args.dataset + "_"
+    )
