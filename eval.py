@@ -50,6 +50,7 @@ with torch.no_grad():
     pred_label = torch.hstack(test_pred)
     cm = confusion_matrix(true_label.data.cpu().numpy(), pred_label.data.cpu().numpy())
     classes = test_loader.dataset.classes
+
     os.makedirs("confusion_matrixs/", exist_ok=True)
     cm_plot(
         num_classes=len(classes),

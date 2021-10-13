@@ -11,6 +11,7 @@ import argparse
 import backbones
 from load_data import build
 from torch.utils.data import DataLoader
+import pandas as pd
 from sklearn.metrics import confusion_matrix
 from util import cm_plot, tsne_feature_visualization, tsne_plot, set_bn_eval
 
@@ -23,6 +24,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
     # model.apply(set_bn_eval)
     print("start_training")
     best_acc = 0
+    test_accs = []
     for epoch in range(1, args.epochs + 1):
         Loss, train_correct = 0, 0
         for idx, (data, target) in enumerate(train_loader):
@@ -63,6 +65,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
         ) = test(args, model, test_loader, criterion, device)
         writer.add_scalar("Test/Loss", test_loss, epoch)
         writer.add_scalar("Test/Acc", test_acc, epoch)
+        test_accs.append(test_acc.item())
         print(
             "Test Accuracy: {}/{} ({:.2f}%)".format(
                 test_correct, len_test_dataset, test_acc
@@ -73,9 +76,16 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
             best_model = model
             print("Best acc :{:.2f}%, at Epoch {}".format(best_acc, epoch))
         else:
-            # best_model = best_model
+            best_model = best_model
             print("Best acc is :{:.2f}%".format(best_acc))
-    torch.save(best_model, args.dataset + "_best_model.pth")
+    accs = pd.DataFrame(columns=["acc"], data=test_accs)
+    os.makedirs("acc_csv/", exist_ok=True)
+    accs.to_csv("acc_csv/" + args.dataset + "_test_acc.csv")
+    os.makedirs("ckps/" + args.dataset, exist_ok=True)
+    torch.save(
+        best_model,
+        os.path.join("ckps/" + args.dataset, args.dataset + "_best_model.pth"),
+    )
     true_label = torch.hstack(test_true)
     pred_label = torch.hstack(test_pred)
     cm = confusion_matrix(true_label.data.cpu().numpy(), pred_label.data.cpu().numpy())
@@ -124,17 +134,16 @@ def proxies_reducer(num_centers, logit):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a CNN")
     parser.add_argument("--model_name", help="model", default="resnet50", type=str)
-    parser.add_argument("--embedding_size", help="model", default="512", type=int)
-    parser.add_argument("--embedding", help="model", default=True, type=bool)
-    parser.add_argument("--num_centers", help="model", default=None)
+    parser.add_argument("--embedding_size", default="512", type=int)
+    parser.add_argument("--embedding", default=True, type=bool)
+    parser.add_argument("--num_centers", default=None)
     parser.add_argument("--cuda_id", help="cuda id", default="1", type=str)
     parser.add_argument(
         "--data_root",
-        help="dataset root path",
         default="/home/xjw/jianwen/data/",
         type=str,
     )
-    parser.add_argument("--dataset", help="dataset", default="mbr", type=str)
+    parser.add_argument("--dataset", help="dataset", default="ori_bgd", type=str)
     parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)
