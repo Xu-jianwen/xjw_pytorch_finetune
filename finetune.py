@@ -11,6 +11,7 @@ import argparse
 import backbones
 from load_data import build
 from torch.utils.data import DataLoader
+import copy
 import pandas as pd
 from sklearn.metrics import confusion_matrix
 from util import cm_plot, tsne_feature_visualization, tsne_plot, set_bn_eval
@@ -73,10 +74,9 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
         )
         if test_acc >= best_acc:
             best_acc = test_acc
-            best_model = model
+            best_model = copy.deepcopy(model)
             print("Best acc :{:.2f}%, at Epoch {}".format(best_acc, epoch))
         else:
-            best_model = best_model
             print("Best acc is :{:.2f}%".format(best_acc))
     accs = pd.DataFrame(columns=["acc"], data=test_accs)
     os.makedirs("acc_csv/", exist_ok=True)
@@ -85,6 +85,10 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
     torch.save(
         best_model,
         os.path.join("ckps/" + args.dataset, args.dataset + "_best_model.pth"),
+    )
+    torch.save(
+        model,
+        os.path.join("ckps/" + args.dataset, args.dataset + ".pth"),
     )
     true_label = torch.hstack(test_true)
     pred_label = torch.hstack(test_pred)
@@ -147,7 +151,7 @@ if __name__ == "__main__":
     parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)
-    parser.add_argument("--epochs", help="num_epochs", default=200, type=int)
+    parser.add_argument("--epochs", help="num_epochs", default=50, type=int)
     parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
     parser.add_argument("--workers", help="workers of dataloader", default=4, type=int)
     args = parser.parse_args()
