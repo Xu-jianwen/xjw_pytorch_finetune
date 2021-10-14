@@ -12,6 +12,7 @@ from util import cm_plot, tsne_feature_visualization, tsne_plot
 
 parser = argparse.ArgumentParser(description="finetune a CNN")
 parser.add_argument("--cuda_id", help="cuda id", default="1", type=str)
+parser.add_argument("--model_name", help="model", default="resnet50", type=str)
 parser.add_argument(
     "--data_root",
     help="dataset root path",
@@ -27,7 +28,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda_id
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 test_loader = build.build_data(args, is_train=False)
-ckp_path = os.path.join("ckps/" + args.dataset, args.dataset + "_best_model.pth")
+ckp_path = os.path.join("ckps/" + args.dataset, args.model_name + "_best_model.pth")
 model = torch.load(ckp_path)
 model.to(device)
 
