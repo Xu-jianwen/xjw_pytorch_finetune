@@ -3,7 +3,7 @@
 
 环境配置：
 
-    conda create pytorch_finetune python=3.9
+    conda create -n pytorch_finetune python=3.9
     conda activate pytorch_finetune
     pip install -r requirements.txt
 - - -
