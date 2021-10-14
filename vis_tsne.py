@@ -4,7 +4,7 @@ from PIL import Image
 
 
 class VisTSNE:
-    def __init_(self, feat, path_list):
+    def __init__(self, feat, path_list):
         self.feats = feat
         self.path_list = path_list
 
