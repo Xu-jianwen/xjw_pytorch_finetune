@@ -5,7 +5,9 @@ import torch.utils
 import argparse
 from load_data import build
 from sklearn.metrics import confusion_matrix
-from util import cm_plot
+from util import cm_plot, tsne_feature_visualization, tsne_plot
+
+# from vis_tsne import VisTSNE
 
 
 parser = argparse.ArgumentParser(description="finetune a CNN")
@@ -33,6 +35,7 @@ model.to(device)
 with torch.no_grad():
     test_correct = 0
     test_pred, test_true = [], []
+    fts = []
     for data, target in test_loader:
         img, label = data.to(device), target.to(device)
         feature, output = model(img)
@@ -40,6 +43,8 @@ with torch.no_grad():
         test_correct += predictions.eq(label.data.view_as(predictions)).sum()
         test_pred.append(predictions)
         test_true.append(label)
+        fts.append(feature)
+    features = torch.vstack(fts).data.cpu().numpy()
     test_acc = 100.0 * test_correct / len(test_loader.dataset)
     print(
         "Test Accuracy: {}/{} ({:.2f}%)".format(
@@ -58,3 +63,14 @@ with torch.no_grad():
         matrix=cm,
         fig_name="confusion_matrixs/" + args.dataset + "_",
     )
+
+    # tsne = VisTSNE()
+    features = tsne_feature_visualization(features, n_components=2)
+    tsne_plot(
+        name=args.dataset,
+        features=features,
+        labels=true_label.data.cpu().numpy(),
+        classes=test_loader.dataset.classes,
+    )
+    # path_list = [os.path.join(test_loader.dataset.root, i) for i in test_loader.dataset.path_list]
+    # tsne.vis_tsne(feats=features, img_list=path_list, grid=[40, 40], save_path="tsne.png")
