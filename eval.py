@@ -6,6 +6,7 @@ import argparse
 from load_data import build
 from sklearn.metrics import confusion_matrix
 from util import cm_plot, tsne_feature_visualization, tsne_plot
+
 # from vis_tsne import VisTSNE
 
 
@@ -64,7 +65,12 @@ with torch.no_grad():
     )
 
     # tsne = VisTSNE()
-    features=tsne_feature_visualization(features, n_components=2)
-    tsne_plot(name=args.dataset, features=features, labels=true_label.data.cpu().numpy(), classes=test_loader.dataset.classes)
+    features = tsne_feature_visualization(features, n_components=2)
+    tsne_plot(
+        name=args.dataset,
+        features=features,
+        labels=true_label.data.cpu().numpy(),
+        classes=test_loader.dataset.classes,
+    )
     # path_list = [os.path.join(test_loader.dataset.root, i) for i in test_loader.dataset.path_list]
     # tsne.vis_tsne(feats=features, img_list=path_list, grid=[40, 40], save_path="tsne.png")
