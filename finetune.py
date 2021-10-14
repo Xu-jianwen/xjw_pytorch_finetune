@@ -84,11 +84,11 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
     os.makedirs("ckps/" + args.dataset, exist_ok=True)
     torch.save(
         best_model,
-        os.path.join("ckps/" + args.dataset, args.dataset + "_best_model.pth"),
+        os.path.join("ckps/" + args.dataset, args.model_name + "_best_model.pth"),
     )
     torch.save(
         model,
-        os.path.join("ckps/" + args.dataset, args.dataset + ".pth"),
+        os.path.join("ckps/" + args.dataset, args.model_name + ".pth"),
     )
     true_label = torch.hstack(test_true)
     pred_label = torch.hstack(test_pred)
@@ -137,7 +137,7 @@ def proxies_reducer(num_centers, logit):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a CNN")
-    parser.add_argument("--model_name", help="model", default="resnet50", type=str)
+    parser.add_argument("--model_name", help="model", default="VGG16", type=str)
     parser.add_argument("--embedding_size", default="512", type=int)
     parser.add_argument("--embedding", default=True, type=bool)
     parser.add_argument("--num_centers", default=None)
@@ -151,12 +151,12 @@ if __name__ == "__main__":
     parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)
-    parser.add_argument("--epochs", help="num_epochs", default=50, type=int)
-    parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
+    parser.add_argument("--epochs", help="num_epochs", default=100, type=int)
+    parser.add_argument("--batch_size", help="batch_size", default=64, type=int)
     parser.add_argument("--workers", help="workers of dataloader", default=4, type=int)
     args = parser.parse_args()
 
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda_id
+    # os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda_id
     device = "cuda" if torch.cuda.is_available() else "cpu"
     writer = SummaryWriter()
 
@@ -170,13 +170,12 @@ if __name__ == "__main__":
     model = backbones.create(
         name=args.model_name,
         pretrained=True,
-        model_name=args.model_name,
-        dim=args.embedding_size,
-        num_class=len(train_loader.dataset.classes) * num_centers,
-        embedding=args.embedding,
+        # dim=args.embedding_size,
+        num_classes=len(train_loader.dataset.classes) * num_centers,
+        # embedding=args.embedding,
     )
     model.to(device)
-    # model = nn.DataParallel(model)
+    model = nn.DataParallel(model)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.decay)
