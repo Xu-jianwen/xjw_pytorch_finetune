@@ -74,7 +74,7 @@ def cm_plot(num_classes, label, matrix, fig_name=""):
     plt.show()
 
 
-def tsne_feature_visualization(name, features, n_components):
+def tsne_feature_visualization(features, n_components):
     features_tsne = TSNE(n_components=n_components).fit_transform(features)
     return features_tsne
 
