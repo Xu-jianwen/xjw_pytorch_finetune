@@ -28,6 +28,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
     test_accs = []
     for epoch in range(1, args.epochs + 1):
         Loss, train_correct = 0, 0
+        print("Learning Rate:{:.6f}".format(optimizer.param_groups[0]['lr']))
         for idx, (data, target) in enumerate(train_loader):
             img, label = data.to(device), target.to(device)
             # feature, output = model(img)
@@ -43,7 +44,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            # scheduler.step()
+            scheduler.step()
 
             Loss += loss.item() * data.size(0)
 
@@ -80,7 +81,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
             print("Best acc is :{:.2f}%".format(best_acc))
     accs = pd.DataFrame(columns=["acc"], data=test_accs)
     os.makedirs("acc_csv/", exist_ok=True)
-    accs.to_csv("acc_csv/" + args.dataset + "_test_acc.csv")
+    accs.to_csv("acc_csv/" + args.model_name + "_" + args.dataset + "_test_acc.csv")
     os.makedirs("ckps/" + args.dataset, exist_ok=True)
     torch.save(
         best_model,
@@ -137,31 +138,39 @@ def proxies_reducer(num_centers, logit):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a CNN")
-    parser.add_argument("--model_name", help="model", default="VGG16", type=str)
+    parser.add_argument("--model_name", help="model", default="AlexNet", type=str)
     parser.add_argument("--embedding_size", default="512", type=int)
     parser.add_argument("--embedding", default=True, type=bool)
     parser.add_argument("--num_centers", default=None)
     parser.add_argument("--cuda_id", help="cuda id", default="1", type=str)
     parser.add_argument(
         "--data_root",
-        default="/home/xjw/jianwen/data/",
+        default="/home/xjw/jianwen/data/ship_align/",
         type=str,
     )
-    parser.add_argument("--dataset", help="dataset", default="ori_bgd", type=str)
+    parser.add_argument("--dataset", help="dataset", default="original_img", type=str)
     parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)
     parser.add_argument("--epochs", help="num_epochs", default=100, type=int)
-    parser.add_argument("--batch_size", help="batch_size", default=64, type=int)
+    parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
     parser.add_argument("--workers", help="workers of dataloader", default=4, type=int)
     args = parser.parse_args()
 
-    # os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda_id
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda_id
     device = "cuda" if torch.cuda.is_available() else "cpu"
     writer = SummaryWriter()
 
-    train_loader = build.build_data(args, is_train=True)
-    test_loader = build.build_data(args, is_train=False)
+    train_loader = build.build_data(
+        args,
+        path_list=os.path.join(args.data_root, args.dataset, "train.txt"),
+        is_train=True,
+    )
+    test_loader = build.build_data(
+        args,
+        path_list=os.path.join(args.data_root, args.dataset, "test.txt"),
+        is_train=False,
+    )
 
     if args.num_centers is None:
         num_centers = 1
@@ -175,13 +184,13 @@ if __name__ == "__main__":
         # embedding=args.embedding,
     )
     model.to(device)
-    model = nn.DataParallel(model)
+    # model = nn.DataParallel(model)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.decay)
     # optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.decay, momentum=args.momentum)
     scheduler = optim.lr_scheduler.MultiStepLR(
-        optimizer, milestones=[10, 500], gamma=0.1
+        optimizer, milestones=[50 * len(train_loader)], gamma=0.1
     )
 
     since = time.time()
