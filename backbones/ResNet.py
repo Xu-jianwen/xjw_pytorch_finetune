@@ -111,7 +111,6 @@ class ResNet(nn.Module):
         self.avgpool = nn.AvgPool2d(7, stride=1)
         self.embeddings = nn.Linear(512 * block.expansion, dim)
         self.embedding = embedding
-        self.cls_fc = (nn.Linear(512 * block.expansion, num_classes),)
         if self.embedding:
             self.classifier = nn.Sequential(
                 nn.ReLU(inplace=True),
@@ -182,7 +181,7 @@ class ResNet(nn.Module):
         return ft, output
 
 
-def resnet18(pretrained, embedding=True, dim=256, num_classes=3):
+def resnet18(pretrained, embedding=False, dim=256, num_classes=3):
     model = ResNet(
         BasicBlock,
         [2, 2, 2, 2],
@@ -200,7 +199,7 @@ def resnet18(pretrained, embedding=True, dim=256, num_classes=3):
     return model
 
 
-def resnet34(pretrained, embedding=True, dim=256, num_classes=3):
+def resnet34(pretrained, embedding=False, dim=256, num_classes=3):
     model = ResNet(
         BasicBlock,
         [3, 4, 6, 3],
@@ -218,7 +217,7 @@ def resnet34(pretrained, embedding=True, dim=256, num_classes=3):
     return model
 
 
-def resnet50(pretrained, embedding=True, dim=256, num_classes=3):
+def resnet50(pretrained, embedding=False, dim=256, num_classes=3):
     model = ResNet(
         Bottleneck,
         [3, 4, 6, 3],
@@ -236,7 +235,7 @@ def resnet50(pretrained, embedding=True, dim=256, num_classes=3):
     return model
 
 
-def resnet101(pretrained, embedding=True, dim=256, num_classes=3):
+def resnet101(pretrained, embedding=False, dim=256, num_classes=3):
     model = ResNet(
         Bottleneck,
         [3, 4, 23, 3],
