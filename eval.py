@@ -27,21 +27,17 @@ args = parser.parse_args()
 os.environ["CUDA_VISIBLE_DEVICES"] = args.cuda_id
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-<<<<<<< HEAD
 test_loader = build.build_data(
     args,
     path_list=os.path.join(args.data_root, args.dataset, "test.txt"),
     is_train=False,
 )
+
 ckp_path = os.path.join("ckps/" + args.dataset, args.model_name + ".pth")
 # ckp_path = os.path.join("ckps/" + args.dataset, args.model_name + "_best_model.pth")
-=======
-test_loader = build.build_data(args, is_train=False)
-ckp_path = os.path.join("ckps/" + args.dataset, args.model_name + "_best_model.pth")
->>>>>>> b4a3059b41d3ef2dca3618cffe77a7d4eddeb50f
+
 model = torch.load(ckp_path)
 model.to(device)
-
 
 with torch.no_grad():
     test_correct = 0
