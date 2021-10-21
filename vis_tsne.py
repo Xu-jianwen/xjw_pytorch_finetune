@@ -33,9 +33,9 @@ class VisTSNE:
     def _img_loader(img_path, img_size):
         img = Image.open(img_path)
         w, h = img.size
-        img_size = (int(img_size * w / max(w, h)), int(img_size * h / max(w, h)))
-
-        img = img.resize(img_size, Image.ANTIALIAS)
+        # _img_size = (int(img_size * w / max(w, h)), int(img_size * h / max(w, h)))
+        _img_size = (img_size, img_size)
+        img = img.resize(_img_size, Image.ANTIALIAS)
         img_array = np.array(img)
         if not len(img_array.shape) == 3:
             return
@@ -46,7 +46,7 @@ class VisTSNE:
     def _feat2cor(feat, grid):
         return feat * np.array(grid)
 
-    def vis_tsne(self, feats, img_list, img_size=32, grid=[50, 50], save_path=None):
+    def vis_tsne(self, feats, img_list, img_size=64, grid=[32, 32], save_path=None):
         assert (
             feats.shape[1] == 2
         ), f"Expect to visualize 2D feature, but get {feats.shape[1]}D feature!"
