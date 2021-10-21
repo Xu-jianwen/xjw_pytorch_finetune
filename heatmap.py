@@ -8,19 +8,17 @@ from torchvision.utils import make_grid, save_image
 from util import visualize_cam, Normalize
 from gradcam import GradCAM, GradCAMpp
 
+
 torch.backends.cudnn.benchmark = True
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-img_dir = "/home/xjw/jianwen/data/chips_bgd/Bulk_Carrier"
-img_name = [
-    "Bulk_Carrier_001.bmp",
-    "Bulk_Carrier_011.bmp",
-    "Bulk_Carrier_100.bmp",
-]
+dataset = "mbr"
+img_dir = "/home/xjw/jianwen/data/ship_align/" + dataset + "/Tug"
+img_name = os.listdir(img_dir)
 img_path = [os.path.join(img_dir, i) for i in img_name]
 
 pil_imgs = [PIL.Image.open(img) for img in img_path]
 
-# normalizer = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+normalizer = Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 torch_imgs = [
     (
         torch.from_numpy(np.asarray(pil_img))
@@ -36,9 +34,11 @@ torch_imgs = [
     F.upsample(torch_img, size=(224, 224), mode="bilinear", align_corners=False)
     for torch_img in torch_imgs
 ]
-normed_torch_imgs = torch_imgs  # normalizer(torch_img)
+normed_torch_imgs = [normalizer(torch_img) for torch_img in torch_imgs]
+# normed_torch_imgs = torch_imgs
 
-resnet = torch.load("chips_bgd_best_model.pth")
+resnet = torch.load("ckps/" + dataset + "/resnet50_best_model.pth")
+# resnet = torch.load("ckps/"+dataset+"/resnet50.pth")
 resnet.eval(), resnet.cuda()
 
 resnet_model_dict = dict(
@@ -60,7 +60,7 @@ for normed_torch_img in normed_torch_imgs:
         torch.stack([normed_torch_img.squeeze().cpu(), heatmap_pp, result_pp], 0)
     )
 
-images = make_grid(torch.vstack(images), nrow=3)
+images = make_grid(torch.vstack(images), nrow=12)
 
 output_dir = "output/" + img_dir.split("/")[-1]
 os.makedirs(output_dir, exist_ok=True)
