@@ -1,4 +1,3 @@
-from __future__ import absolute_import, print_function
 import torch.utils.data as data
 from util import read_image
 import re

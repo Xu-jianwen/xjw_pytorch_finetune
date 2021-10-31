@@ -1,4 +1,3 @@
-from __future__ import print_function, absolute_import
 import torch
 import numpy as np
 import os
@@ -19,7 +18,7 @@ parser.add_argument(
     default="/home/xjw/jianwen/data/ship_align/",
     type=str,
 )
-parser.add_argument("--dataset", help="dataset", default="chips", type=str)
+parser.add_argument("--dataset", help="dataset", default="mbr", type=str)
 parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
 parser.add_argument("--workers", help="workers of dataloader", default=2, type=int)
 args = parser.parse_args()

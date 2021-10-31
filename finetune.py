@@ -1,4 +1,3 @@
-from __future__ import print_function
 import os
 import torch
 import torch.nn as nn
@@ -14,7 +13,7 @@ from torch.utils.data import DataLoader
 import copy
 import pandas as pd
 from sklearn.metrics import confusion_matrix
-from util import cm_plot, tsne_feature_visualization, tsne_plot, set_bn_eval
+from util import cm_plot, set_bn_eval
 
 
 torch.backends.cudnn.benchmark = True
@@ -138,21 +137,21 @@ def proxies_reducer(num_centers, logit):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train a CNN")
-    parser.add_argument("--model_name", help="model", default="AlexNet", type=str)
+    parser.add_argument("--model_name", help="model", default="resnet50", type=str)
     parser.add_argument("--embedding_size", default="512", type=int)
     parser.add_argument("--embedding", default=True, type=bool)
     parser.add_argument("--num_centers", default=None)
     parser.add_argument("--cuda_id", help="cuda id", default="1", type=str)
     parser.add_argument(
         "--data_root",
-        default="/home/xjw/jianwen/data/ship_align/",
+        default="/home/xjw/jianwen/data/ShipRSImageNet_patches/",
         type=str,
     )
-    parser.add_argument("--dataset", help="dataset", default="original_img", type=str)
+    parser.add_argument("--dataset", help="dataset", default="obb_patch2", type=str)
     parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)
-    parser.add_argument("--epochs", help="num_epochs", default=100, type=int)
+    parser.add_argument("--epochs", help="num_epochs", default=300, type=int)
     parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
     parser.add_argument("--workers", help="workers of dataloader", default=4, type=int)
     args = parser.parse_args()
