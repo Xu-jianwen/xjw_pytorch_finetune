@@ -12,8 +12,13 @@ def build_transforms(mode="RGB", is_train=True):
         normalize_transform = T.Normalize(
             mean=[104.0 / 255, 117.0 / 255, 128.0 / 255], std=3 * [1.0 / 255]
         )
+    elif mode == "GRAY":
+        normalize_transform = T.Normalize(
+            mean=[0.5, 0.5, 0.5], std=3 * [1.0 / 255]
+        )
     else:
         normalize_transform = T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    
     if is_train:
         transform = T.Compose(
             [
@@ -28,6 +33,7 @@ def build_transforms(mode="RGB", is_train=True):
         transform = T.Compose(
             [
                 T.Resize([224, 224]),
+                # T.Resize([256, 256]),
                 # T.CenterCrop(224),
                 T.ToTensor(),
                 normalize_transform,
