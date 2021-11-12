@@ -117,10 +117,7 @@ class ResNet(nn.Module):
                 nn.Linear(dim, num_classes, bias=False),
             )
         else:
-            self.classifier = nn.Sequential(
-                nn.ReLU(inplace=True),
-                nn.Linear(512 * block.expansion, num_classes, bias=False),
-            )
+            self.classifier = nn.Linear(512 * block.expansion, num_classes, bias=False) 
 
         self.baselayer = [
             self.conv1,
@@ -174,7 +171,7 @@ class ResNet(nn.Module):
         ft = x5.view(x5.size(0), -1)
         if self.embedding:
             ft = self.embeddings(ft)
-        # ft = nn.functional.normalize(ft, p=2, dim=1)
+        ft = nn.functional.normalize(ft, p=2, dim=1)
         output = self.classifier(ft)
         # output = self.cls_fc(ft)
 
