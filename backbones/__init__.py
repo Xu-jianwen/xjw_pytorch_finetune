@@ -1,14 +1,21 @@
 from .AlexNet import alexnet
-from .vgg import vgg_net
-from .ResNet import resnet
+from .vgg import vgg16, vgg16_bn
+from .ResNet import resnet18, resnet34, resnet50, resnet101
+from .mobilenet_v3 import mobilenet_v3_large, mobilenet_v3_small
+
 
 __factory = {
-    'AlexNet': alexnet,
-    'VGGNet': vgg_net, 
-    'resnet18': resnet,
-    'resnet34': resnet,
-    'resnet50': resnet,
+    "AlexNet": alexnet,
+    "VGG16": vgg16,
+    "VGG16_BN": vgg16_bn,
+    "resnet18": resnet18,
+    "resnet34": resnet34,
+    "resnet50": resnet50,
+    "resnet101": resnet101,
+    "mobilenetv3_large": mobilenet_v3_large,
+    "mobilenetv3_small": mobilenet_v3_small,
 }
+
 
 def names():
     return sorted(__factory.keys())

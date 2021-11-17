@@ -79,43 +79,99 @@ cfg = {
 }
 
 
-def vgg11(**kwargs):
+def vgg11(pretrained=False, **kwargs):
     model = VGG(make_layers(cfg['A']), **kwargs)
+    if pretrained:
+        # model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']))
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(model_urls['vgg11'])
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
     return model
 
 
-def vgg11_bn(**kwargs):
+def vgg11_bn(pretrained=False, **kwargs):
     model = VGG(make_layers(cfg['A'], batch_norm=True), **kwargs)
+    if pretrained:
+        # model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']))
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(model_urls['vgg11_bn'])
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
     return model
 
 
-def vgg13(**kwargs):
+def vgg13(pretrained=False, **kwargs):
     model = VGG(make_layers(cfg['B']), **kwargs)
+    if pretrained:
+        # model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']))
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(model_urls['vgg13'])
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
     return model
 
 
-def vgg13_bn(**kwargs):
+def vgg13_bn(pretrained=False, **kwargs):
     model = VGG(make_layers(cfg['B'], batch_norm=True), **kwargs)
+    if pretrained:
+        # model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']))
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(model_urls['vgg13_bn'])
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
     return model
 
 
-def vgg16(**kwargs):
+def vgg16(pretrained=False, **kwargs):
     model = VGG(make_layers(cfg['D']), **kwargs)
+    if pretrained:
+        # model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']))
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(model_urls['vgg16'])
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
     return model
 
 
-def vgg16_bn(**kwargs):
+def vgg16_bn(pretrained=False, **kwargs):
     model = VGG(make_layers(cfg['D'], batch_norm=True), **kwargs)
+    if pretrained:
+        # model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']))
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(model_urls['vgg16_bn'])
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
     return model
 
 
-def vgg19(**kwargs):
+def vgg19(pretrained=False, **kwargs):
     model = VGG(make_layers(cfg['E']), **kwargs)
+    if pretrained:
+        # model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']))
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(model_urls['vgg19'])
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
     return model
 
 
-def vgg19_bn(**kwargs):
+def vgg19_bn(pretrained=False, **kwargs):
     model = VGG(make_layers(cfg['E'], batch_norm=True), **kwargs)
+    if pretrained:
+        # model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']))
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(model_urls['vgg19_bn'])
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
     return model
 
 
@@ -126,9 +182,13 @@ def vgg_net(pretrained=False, **kwargs):
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = vgg16_bn(**kwargs)
+    model = vgg16(**kwargs)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']))
-        # model.load_state_dict(torch.load("alexnet.pth"))
+        # model.load_state_dict(model_zoo.load_url(model_urls['vgg16_bn']))
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(model_urls['vgg16_bn'])
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
     return model
 

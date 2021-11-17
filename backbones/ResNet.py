@@ -5,7 +5,7 @@ from PIL import Image
 from torch.utils import model_zoo
 
 
-__all__ = ["ResNet", "resnet"]
+__all__ = ["ResNet", "resnet18", "resnet34", "resnet50", "resnet101"]
 
 
 model_urls = {
@@ -111,17 +111,13 @@ class ResNet(nn.Module):
         self.avgpool = nn.AvgPool2d(7, stride=1)
         self.embeddings = nn.Linear(512 * block.expansion, dim)
         self.embedding = embedding
-        self.cls_fc = nn.Linear(512 * block.expansion, num_classes),
         if self.embedding:
             self.classifier = nn.Sequential(
                 nn.ReLU(inplace=True),
                 nn.Linear(dim, num_classes, bias=False),
             )
         else:
-            self.classifier = nn.Sequential(
-                nn.ReLU(inplace=True),
-                nn.Linear(512 * block.expansion, num_classes, bias=False),
-            )
+            self.classifier = nn.Linear(512 * block.expansion, num_classes, bias=False) 
 
         self.baselayer = [
             self.conv1,
@@ -175,42 +171,80 @@ class ResNet(nn.Module):
         ft = x5.view(x5.size(0), -1)
         if self.embedding:
             ft = self.embeddings(ft)
-        # ft = nn.functional.normalize(ft, p=2, dim=1)
+        ft = nn.functional.normalize(ft, p=2, dim=1)
         output = self.classifier(ft)
         # output = self.cls_fc(ft)
 
         return ft, output
 
 
-def resnet(model_name, pretrained, embedding=True, dim=256, num_class=3):
-
-    residual_block = {
-        "resnet18": BasicBlock,
-        "resnet34": BasicBlock,
-        "resnet50": Bottleneck,
-        "resnet101": Bottleneck,
-    }
-
-    num_blocks = {
-        "resnet18": [2, 2, 2, 2],
-        "resnet34": [3, 4, 6, 3],
-        "resnet50": [3, 4, 6, 3],
-        "resnet101": [3, 4, 23, 3],
-    }
-
+def resnet18(pretrained, embedding=False, dim=256, num_classes=3):
     model = ResNet(
-        residual_block[model_name],
-        num_blocks[model_name],
+        BasicBlock,
+        [2, 2, 2, 2],
         embedding=embedding,
         dim=dim,
-        num_classes=num_class,
+        num_classes=num_classes,
     )
-    url = model_urls[model_name]
+    url = model_urls["resnet18"]
     if pretrained is True:
         model_dict = model.state_dict()
         pretrained_dict = model_zoo.load_url(url)
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
         model_dict.update(pretrained_dict)
         model.load_state_dict(model_dict)
+    return model
 
+
+def resnet34(pretrained, embedding=False, dim=256, num_classes=3):
+    model = ResNet(
+        BasicBlock,
+        [3, 4, 6, 3],
+        embedding=embedding,
+        dim=dim,
+        num_classes=num_classes,
+    )
+    url = model_urls["resnet34"]
+    if pretrained is True:
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(url)
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
+    return model
+
+
+def resnet50(pretrained, embedding=False, dim=256, num_classes=3):
+    model = ResNet(
+        Bottleneck,
+        [3, 4, 6, 3],
+        embedding=embedding,
+        dim=dim,
+        num_classes=num_classes,
+    )
+    url = model_urls["resnet50"]
+    if pretrained is True:
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(url)
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
+    return model
+
+
+def resnet101(pretrained, embedding=False, dim=256, num_classes=3):
+    model = ResNet(
+        Bottleneck,
+        [3, 4, 23, 3],
+        embedding=embedding,
+        dim=dim,
+        num_classes=num_classes,
+    )
+    url = model_urls["resnet101"]
+    if pretrained is True:
+        model_dict = model.state_dict()
+        pretrained_dict = model_zoo.load_url(url)
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        model.load_state_dict(model_dict)
     return model
