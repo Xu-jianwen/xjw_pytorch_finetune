@@ -35,7 +35,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
             normed_weights = F.normalize(model.classifier.weight, p=2, dim=1)
             if args.num_centers is not None:
                 logits = ft@normed_weights.t()
-                output = proxies_reducer(args.num_centers, logits)
+                output = proxies_reducer(len(train_loader.dataset.classes), args.num_centers, logits)
             else:
                 output = ft@normed_weights.t()
             predictions = torch.max(output, dim=1)[1]
@@ -86,11 +86,11 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
     os.makedirs("ckps/" + args.dataset, exist_ok=True)
     torch.save(
         best_model,
-        os.path.join("ckps/" + args.dataset, args.model_name + "best_model.pth"),
+        os.path.join("ckps/" + args.dataset, args.model_name + "_spp_best_model.pth"),
     )
     torch.save(
         model,
-        os.path.join("ckps/" + args.dataset, args.model_name + ".pth"),
+        os.path.join("ckps/" + args.dataset, args.model_name + "spp.pth"),
     )
     true_label = torch.hstack(test_true)
     pred_label = torch.hstack(test_pred)
@@ -138,18 +138,18 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", help="model", default="resnet50", type=str)
     parser.add_argument("--embedding_size", default="512", type=int)
     parser.add_argument("--embedding", default=True, type=bool)
-    parser.add_argument("--num_centers", default=None)
+    parser.add_argument("--num_centers", default=None, type=int)
     parser.add_argument("--cuda_id", help="cuda id", default="1", type=str)
     parser.add_argument(
         "--data_root",
-        default="/home/xjw/jianwen/data/",
+        default="/home/xjw/jianwen/data/ShipRSImageNet_patches/",
         type=str,
     )
-    parser.add_argument("--dataset", help="dataset", default="FGSC23", type=str)
+    parser.add_argument("--dataset", help="dataset", default="obb_patch_pad", type=str)
     parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)
-    parser.add_argument("--epochs", help="num_epochs", default=100, type=int)
+    parser.add_argument("--epochs", help="num_epochs", default=200, type=int)
     parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
     parser.add_argument("--workers", help="workers of dataloader", default=4, type=int)
     args = parser.parse_args()
