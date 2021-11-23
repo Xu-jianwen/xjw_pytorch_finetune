@@ -86,11 +86,11 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
     os.makedirs("ckps/" + args.dataset, exist_ok=True)
     torch.save(
         best_model,
-        os.path.join("ckps/" + args.dataset, args.model_name + "_spp_best_model.pth"),
+        os.path.join("ckps/" + args.dataset, args.model_name + "_best_model.pth"),
     )
     torch.save(
         model,
-        os.path.join("ckps/" + args.dataset, args.model_name + "spp.pth"),
+        os.path.join("ckps/" + args.dataset, args.model_name + ".pth"),
     )
     true_label = torch.hstack(test_true)
     pred_label = torch.hstack(test_pred)
@@ -142,14 +142,14 @@ if __name__ == "__main__":
     parser.add_argument("--cuda_id", help="cuda id", default="1", type=str)
     parser.add_argument(
         "--data_root",
-        default="/home/xjw/jianwen/data/ShipRSImageNet_patches/",
+        default="/home/xjw/jianwen/data/ship_align/",
         type=str,
     )
-    parser.add_argument("--dataset", help="dataset", default="obb_patch_pad", type=str)
+    parser.add_argument("--dataset", help="dataset", default="pad_obb", type=str)
     parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)
-    parser.add_argument("--epochs", help="num_epochs", default=200, type=int)
+    parser.add_argument("--epochs", help="num_epochs", default=100, type=int)
     parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
     parser.add_argument("--workers", help="workers of dataloader", default=4, type=int)
     args = parser.parse_args()
