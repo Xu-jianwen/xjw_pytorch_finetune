@@ -35,7 +35,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
             normed_weights = F.normalize(model.classifier.weight, p=2, dim=1)
             if args.num_centers is not None:
                 logits = ft@normed_weights.t()
-                output = proxies_reducer(args.num_centers, logits)
+                output = proxies_reducer(len(train_loader.dataset.classes), args.num_centers, logits)
             else:
                 output = ft@normed_weights.t()
             predictions = torch.max(output, dim=1)[1]
@@ -86,7 +86,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
     os.makedirs("ckps/" + args.dataset, exist_ok=True)
     torch.save(
         best_model,
-        os.path.join("ckps/" + args.dataset, args.model_name + "best_model.pth"),
+        os.path.join("ckps/" + args.dataset, args.model_name + "_best_model.pth"),
     )
     torch.save(
         model,
@@ -138,14 +138,14 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", help="model", default="resnet50", type=str)
     parser.add_argument("--embedding_size", default="512", type=int)
     parser.add_argument("--embedding", default=True, type=bool)
-    parser.add_argument("--num_centers", default=None)
+    parser.add_argument("--num_centers", default=None, type=int)
     parser.add_argument("--cuda_id", help="cuda id", default="1", type=str)
     parser.add_argument(
         "--data_root",
-        default="/home/xjw/jianwen/data/",
+        default="/home/xjw/jianwen/data/ship_align/",
         type=str,
     )
-    parser.add_argument("--dataset", help="dataset", default="FGSC23", type=str)
+    parser.add_argument("--dataset", help="dataset", default="pad_obb", type=str)
     parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)

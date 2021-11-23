@@ -1,8 +1,8 @@
 import torch.nn as nn
 import math
-import torchvision.transforms as transforms
 from PIL import Image
 from torch.utils import model_zoo
+from backbones.spp_layer import spatial_pyramid_pool
 
 
 __all__ = ["ResNet", "resnet18", "resnet34", "resnet50", "resnet101"]
@@ -100,6 +100,7 @@ class ResNet(nn.Module):
     def __init__(self, block, layers, dim=256, num_classes=3, embedding=True):
         self.inplanes = 64
         super(ResNet, self).__init__()
+        self.output_num = [3, 2, 1]
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
@@ -109,15 +110,15 @@ class ResNet(nn.Module):
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(7, stride=1)
-        self.embeddings = nn.Linear(512 * block.expansion, dim)
+        self.embeddings = nn.Sequential(
+            nn.Linear(512 * block.expansion, dim),
+            nn.LeakyReLU(inplace=True),
+        )
         self.embedding = embedding
         if self.embedding:
-            self.classifier = nn.Sequential(
-                nn.ReLU(inplace=True),
-                nn.Linear(dim, num_classes, bias=False),
-            )
+            self.classifier = nn.Linear(dim, num_classes, bias=False)
         else:
-            self.classifier = nn.Linear(512 * block.expansion, num_classes, bias=False) 
+            self.classifier = nn.Linear(512 * block.expansion, num_classes, bias=False)
 
         self.baselayer = [
             self.conv1,
@@ -162,18 +163,23 @@ class ResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x0 = self.maxpool(x)
-        x1 = self.layer1(x0)
-        x2 = self.layer2(x1)
-        x3 = self.layer3(x2)
-        x4 = self.layer4(x3)
-        x5 = self.avgpool(x4)
-        ft = x5.view(x5.size(0), -1)
+        x = self.maxpool(x)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        # ft = spatial_pyramid_pool(
+        #     previous_conv=x,
+        #     num_sample=x.size(0),
+        #     previous_conv_size=[int(x.size(2)), int(x.size(3))],
+        #     out_pool_size=self.output_num,
+        # )
+        x = self.avgpool(x)
+        ft = x.view(x.size(0), -1)
         if self.embedding:
             ft = self.embeddings(ft)
         ft = nn.functional.normalize(ft, p=2, dim=1)
         output = self.classifier(ft)
-        # output = self.cls_fc(ft)
 
         return ft, output
 

@@ -40,11 +40,11 @@ def set_bn_eval(m):
         m.eval()
 
 
-def proxies_reducer(num_classes, num_centers, logit):
+def proxies_reducer(num_classes, num_centers, logit, gamma=-32):
     logit = logit.view(-1, num_classes, num_centers)
     # prob = F.softmax(logit, dim=2)
     # sim_to_classes = torch.sum(prob * logit, dim=2)
-    sim_to_classes = torch.logsumexp(-64 * logit, dim=2)
+    sim_to_classes = torch.logsumexp(gamma * logit, dim=2)
     return sim_to_classes
 
 
