@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 import copy
 from sklearn.metrics import confusion_matrix
 from util import cm_plot, set_bn_eval, proxies_reducer
-from sim_metric import ArcMarginProduct
+from arc_face_loss import ArcFace
 
 
 torch.backends.cudnn.benchmark = True
@@ -33,16 +33,16 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
             # feature, output = model(img)
             ft, logits = model(img)
             normed_weights = F.normalize(model.classifier.weight, p=2, dim=1)
-            if args.num_centers is not None:
-                logits = ft@normed_weights.t()
-                output = proxies_reducer(len(train_loader.dataset.classes), args.num_centers, logits)
-            else:
-                output = ft@normed_weights.t()
+           
+            logits = ft@normed_weights.t()
+            output = proxies_reducer(len(train_loader.dataset.classes), args.num_centers, logits)
+            
             predictions = torch.max(output, dim=1)[1]
             train_correct += predictions.eq(label.data.view_as(predictions)).sum()
             # sim_mat = metric(output, label)
             # loss = criterion(sim_mat, label)
-            loss = criterion(output, label)
+            # loss = criterion(output, label)
+            loss = criterion(normed_weights, ft, label)
 
             optimizer.zero_grad()
             loss.backward()
@@ -67,7 +67,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
             len_test_dataset,
             test_loss,
             test_acc,
-        ) = test(args, model, test_loader, criterion, device)
+        ) = validate(args, model, test_loader, criterion, device)
         writer.add_scalar("Test/Loss", test_loss, epoch)
         writer.add_scalar("Test/Acc", test_acc, epoch)
         test_accs.append(test_acc.item())
@@ -86,11 +86,11 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
     os.makedirs("ckps/" + args.dataset, exist_ok=True)
     torch.save(
         best_model,
-        os.path.join("ckps/" + args.dataset, args.model_name + "_best_model.pth"),
+        os.path.join("ckps/" + args.dataset, args.model_name + "_mp_arcface_best_model.pth"),
     )
     torch.save(
         model,
-        os.path.join("ckps/" + args.dataset, args.model_name + ".pth"),
+        os.path.join("ckps/" + args.dataset, args.model_name + "_mp_arcface.pth"),
     )
     true_label = torch.hstack(test_true)
     pred_label = torch.hstack(test_pred)
@@ -100,7 +100,7 @@ def finetune(args, model, train_loader, test_loader, criterion, optimizer, devic
 
 
 @torch.no_grad()
-def test(args, model, test_loader, criterion, device):
+def validate(args, model, test_loader, criterion, device):
     model.eval()
     test_correct, Test_Loss = 0, 0
     test_pred, test_true = [], []
@@ -109,12 +109,12 @@ def test(args, model, test_loader, criterion, device):
         # feature, output = model(img)
         ft, logits = model(img)
         Normed_Weights = F.normalize(model.classifier.weight, p=2, dim=1)
-        if args.num_centers is not None:
-            logits = ft@Normed_Weights.t()
-            output = proxies_reducer(len(test_loader.dataset.classes),args.num_centers, logits)
-        else:
-            output = ft@Normed_Weights.t()
-        test_loss = criterion(output, label)
+        
+        logits = ft@Normed_Weights.t()
+        output = proxies_reducer(len(test_loader.dataset.classes),args.num_centers, logits)
+        # output = logits
+        # test_loss = criterion(output, label)
+        test_loss = criterion(Normed_Weights, ft, label)
         predictions = torch.max(output, dim=1)[1]
         test_pred.append(predictions)
         test_true.append(label)
@@ -142,14 +142,14 @@ if __name__ == "__main__":
     parser.add_argument("--cuda_id", help="cuda id", default="1", type=str)
     parser.add_argument(
         "--data_root",
-        default="/home/xjw/jianwen/data/ship_align/",
+        default="/home/xjw/jianwen/data/",
         type=str,
     )
-    parser.add_argument("--dataset", help="dataset", default="pad_obb", type=str)
+    parser.add_argument("--dataset", help="dataset", default="ShipRSImageNet", type=str)
     parser.add_argument("--lr", help="learning rate", default=1e-4, type=float)
     parser.add_argument("--decay", help="weight decay", default=5e-4, type=float)
     parser.add_argument("--momentum", help="SGD momentum", default=0.9, type=float)
-    parser.add_argument("--epochs", help="num_epochs", default=100, type=int)
+    parser.add_argument("--epochs", help="num_epochs", default=200, type=int)
     parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
     parser.add_argument("--workers", help="workers of dataloader", default=4, type=int)
     args = parser.parse_args()
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     )
     test_loader = build.build_data(
         args,
-        path_list=os.path.join(args.data_root, args.dataset, "test.txt"),
+        path_list=os.path.join(args.data_root, args.dataset, "val.txt"),
         is_train=False,
     )
 
@@ -183,8 +183,8 @@ if __name__ == "__main__":
     model.to(device)
     # model = nn.DataParallel(model)
 
-    criterion = nn.CrossEntropyLoss()
-    metric = ArcMarginProduct()
+    # criterion = nn.CrossEntropyLoss()
+    criterion = ArcFace(num_classes=len(train_loader.dataset.classes), embedding_size=args.embedding_size)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.decay)
     # optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.decay, momentum=args.momentum)
     scheduler = optim.lr_scheduler.MultiStepLR(

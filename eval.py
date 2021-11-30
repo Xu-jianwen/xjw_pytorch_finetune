@@ -10,7 +10,7 @@ from vis_tsne import VisTSNE
 
 
 parser = argparse.ArgumentParser(description="finetune a CNN")
-parser.add_argument("--cuda_id", help="cuda id", default="0", type=str)
+parser.add_argument("--cuda_id", help="cuda id", default="1", type=str)
 parser.add_argument("--num_centers", default=None)
 parser.add_argument("--model_name", help="model", default="resnet50", type=str)
 parser.add_argument(
@@ -19,7 +19,7 @@ parser.add_argument(
     default="/home/xjw/jianwen/data/",
     type=str,
 )
-parser.add_argument("--dataset", help="dataset", default="FGSC23", type=str)
+parser.add_argument("--dataset", help="dataset", default="ShipRSImageNet", type=str)
 parser.add_argument("--batch_size", help="batch_size", default=100, type=int)
 parser.add_argument("--workers", help="workers of dataloader", default=2, type=int)
 args = parser.parse_args()
@@ -33,7 +33,7 @@ test_loader = build.build_data(
     is_train=False,
 )
 
-ckp_path = os.path.join("ckps/" + args.dataset, args.model_name + ".pth")
+ckp_path = os.path.join("ckps/" + args.dataset, args.model_name + "_mp_best_model.pth")
 # ckp_path = os.path.join("ckps/" + args.dataset, args.model_name + "_mp_best_model.pth")
 
 model = torch.load(ckp_path)
@@ -49,15 +49,14 @@ with torch.no_grad():
         normed_weights = torch.nn.functional.normalize(
             model.classifier.weight, p=2, dim=1
         )
-        if model.classifier.out_features > len(test_loader.dataset.classes):
-            logits = feature @ normed_weights.t()
-            output = proxies_reducer(
-                len(test_loader.dataset.classes),
-                int(model.classifier.out_features / len(test_loader.dataset.classes)),
-                logits,
-            )
-        else:
-            output = feature @ normed_weights.t()
+
+        logits = feature @ normed_weights.t()
+        output = proxies_reducer(
+            len(test_loader.dataset.classes),
+            int(model.classifier.out_features / len(test_loader.dataset.classes)),
+            logits,
+        )
+
         predictions = torch.max(output, dim=1)[1]
         test_correct += predictions.eq(label.data.view_as(predictions)).sum()
         test_pred.append(predictions)

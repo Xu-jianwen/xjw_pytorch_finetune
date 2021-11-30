@@ -41,11 +41,16 @@ def set_bn_eval(m):
 
 
 def proxies_reducer(num_classes, num_centers, logit, gamma=-32):
-    logit = logit.view(-1, num_classes, num_centers)
-    # prob = F.softmax(logit, dim=2)
-    # sim_to_classes = torch.sum(prob * logit, dim=2)
-    sim_to_classes = torch.logsumexp(gamma * logit, dim=2)
-    return sim_to_classes
+    if num_centers == 1:
+        return logit
+    elif num_centers is None:
+        return logit
+    else:
+        logit = logit.view(-1, num_classes, num_centers)
+        # prob = F.softmax(logit, dim=2)
+        # sim_to_classes = torch.sum(prob * logit, dim=2)
+        sim_to_classes = torch.logsumexp(gamma * logit, dim=2)
+        return sim_to_classes
 
 
 def cm_plot(num_classes, label, matrix, fig_name=""):
