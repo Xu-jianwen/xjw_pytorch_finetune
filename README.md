@@ -9,7 +9,7 @@
 - - -
 标签格式：
 
-Crude_Oil_Tanker/Crude_Oil_Tanker_084.bmp 0
+Crude_Oil_Tanker/Crude_Oil_Tanker_084.bmp,0
 
 提供了split_dataset.py用于划分训练集和测试集
 - - -
