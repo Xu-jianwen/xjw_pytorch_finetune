@@ -2,7 +2,7 @@ import torch.nn as nn
 import math
 from PIL import Image
 from torch.utils import model_zoo
-from backbones.spp_layer import spatial_pyramid_pool
+# from backbones.spp_layer import spatial_pyramid_pool
 
 
 __all__ = ["ResNet", "resnet18", "resnet34", "resnet50", "resnet101"]
