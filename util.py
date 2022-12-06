@@ -1,4 +1,6 @@
 from __future__ import print_function
+from cv2 import rotate
+import torch.nn.functional as F
 import torch
 from sklearn.manifold import TSNE
 import numpy as np
@@ -40,16 +42,17 @@ def set_bn_eval(m):
         m.eval()
 
 
-def proxies_reducer(num_classes, num_centers, logit, gamma=-32):
+def proxies_reducer(num_classes, num_centers, logit, gamma=64):
     if num_centers == 1:
         return logit
     elif num_centers is None:
         return logit
     else:
-        logit = logit.view(-1, num_classes, num_centers)
-        # prob = F.softmax(logit, dim=2)
-        # sim_to_classes = torch.sum(prob * logit, dim=2)
-        sim_to_classes = torch.logsumexp(gamma * logit, dim=2)
+        logit = logit.view(-1, num_centers, num_classes)
+        # prob = F.softmax(gamma * logit, dim=1)
+        # sim_to_classes = torch.sum(prob * logit, dim=1)
+        sim_to_classes = torch.logsumexp(gamma * logit, dim=1) / gamma
+        # sim_to_classes = torch.max(logit, dim=2)[0]
         return sim_to_classes
 
 
@@ -86,6 +89,40 @@ def cm_plot(num_classes, label, matrix, fig_name=""):
     plt.savefig(fig_name + "confusion_matrix.png", dpi=300)
     plt.show()
 
+def percentage_cm_plot(num_classes, label, matrix, fig_name=""):
+    print(matrix)
+    matrix = matrix.astype('float')
+    for i in range(num_classes):
+        matrix[i] = matrix[i]/matrix[i].sum()
+    plt.imshow(matrix, cmap=plt.cm.Blues)
+    # 设置x轴坐标label
+    plt.xticks(range(num_classes), label, rotation=45, fontsize=15)
+    # 设置y轴坐标label
+    plt.yticks(range(num_classes), label, rotation=-45, fontsize=15)
+    # 显示colorbar
+    # plt.colorbar()
+    plt.ylabel('True Labels', fontsize=15)
+    plt.xlabel('Predicted Labels', fontsize=15)
+    plt.title(fig_name.split("_")[-3]+" "+fig_name.split("_")[-2], fontsize=15)
+    # plt.title('Confusion matrix')
+
+    # 在图中标注数量/概率信息
+    thresh = matrix.max() / 2
+    for x in range(num_classes):
+        for y in range(num_classes):
+            # 注意这里的matrix[y, x]不是matrix[x, y]
+            info = matrix[y, x]
+            # flt = info/matrix[y].sum()
+            percentage = format(info, '.1%')
+            plt.text(x, y, percentage,
+                     verticalalignment='center',
+                     horizontalalignment='center',fontsize=15
+                     ,color="white" if info > thresh else "black")
+    
+    plt.tight_layout()
+    plt.savefig(fig_name + "confusion_matrix.png", dpi=300)
+    plt.show()
+
 
 def tsne_feature_visualization(features, n_components):
     features_tsne = TSNE(n_components=n_components).fit_transform(features)
@@ -95,7 +132,7 @@ def tsne_feature_visualization(features, n_components):
 def tsne_plot(name, features, labels, classes):
     ship_labels = labels
     label_com = classes
-    marker = ["v", "o", "s"]
+    marker = ["v", "o", "s", "P", "*"]
     figsize = 10, 8
 
     plt.figure(figsize=figsize)
@@ -103,17 +140,20 @@ def tsne_plot(name, features, labels, classes):
         data_ship = features[ship_labels == index]
         data_ship_x = data_ship[:, 0]
         data_ship_y = data_ship[:, 1]
-        plt.scatter(data_ship_x, data_ship_y, marker=marker[int(index / 10)])
-    plt.legend(
-        labels=label_com,
-        loc="best",
-        ncol=2,
-        borderpad=0,
-        frameon=False,
-        markerscale=1,
-        labelspacing=0,
-        fontsize=10,
-    )
+        # plt.scatter(data_ship_x, data_ship_y, marker=marker[int(index / 10)])
+        plt.scatter(data_ship_x, data_ship_y, marker=marker[index], s=144)
+    # plt.legend(
+    #     labels=label_com,
+    #     loc="best",
+    #     ncol=1,
+    #     borderpad=0,
+    #     frameon=False,
+    #     markerscale=1,
+    #     labelspacing=0,
+    #     fontsize=20,
+    # )
+    # plt.axes().get_xaxis().set_visible(False) # 隐藏x坐标轴
+    plt.axis("off")
     plt.savefig(name + "_tsne.png", dpi=300)
     plt.show()
 
@@ -340,3 +380,84 @@ class Normalize(object):
         return self.__class__.__name__ + "(mean={0}, std={1})".format(
             self.mean, self.std
         )
+
+
+def distance_matrix(inputs):
+    nB = inputs.size(0)
+    dist = torch.pow(inputs, 2).sum(dim=1, keepdim=True).expand(nB, nB)
+    dist = dist + dist.t()
+    # use squared
+    dist.addmm_(inputs, inputs.t(), beta=1, alpha=-2).clamp_(min=1e-12)
+    return dist
+
+# Copyright (c) Malong Technologies Co., Ltd.
+# All rights reserved.
+#
+# Contact: github@malong.com
+#
+# This source code is licensed under the LICENSE file in the root directory of this source tree.
+
+import copy
+import random
+from collections import defaultdict
+
+import numpy as np
+import torch
+from torch.utils.data.sampler import Sampler
+
+
+class RandomIdentitySampler(Sampler):
+    """
+    Randomly sample N identities, then for each identity,
+    randomly sample K instances, therefore batch size is N*K.
+    Args:
+    - dataset (BaseDataSet).
+    - num_instances (int): number of instances per identity in a batch.
+    - batch_size (int): number of examples in a batch.
+    """
+
+    def __init__(self, dataset, batch_size, num_instances, max_iters):
+        self.label_index_dict = dataset.label_index_dict
+        self.batch_size = batch_size
+        self.K = num_instances
+        self.num_labels_per_batch = self.batch_size // self.K
+        self.max_iters = max_iters
+        self.labels = list(self.label_index_dict.keys())
+
+    def __len__(self):
+        return self.max_iters
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f"|Sampler| iters {self.max_iters}| K {self.K}| M {self.batch_size}|"
+
+    def _prepare_batch(self):
+        batch_idxs_dict = defaultdict(list)
+
+        for label in self.labels:
+            idxs = copy.deepcopy(self.label_index_dict[label])
+            if len(idxs) < self.K:
+                idxs.extend(np.random.choice(idxs, size=self.K - len(idxs), replace=True))
+            random.shuffle(idxs)
+
+            batch_idxs_dict[label] = [idxs[i * self.K: (i + 1) * self.K] for i in range(len(idxs) // self.K)]
+
+        avai_labels = copy.deepcopy(self.labels)
+        return batch_idxs_dict, avai_labels
+
+    def __iter__(self):
+        batch_idxs_dict, avai_labels = self._prepare_batch()
+        for _ in range(self.max_iters):
+            batch = []
+            if len(avai_labels) < self.num_labels_per_batch:
+                batch_idxs_dict, avai_labels = self._prepare_batch()
+
+            selected_labels = random.sample(avai_labels, self.num_labels_per_batch)
+            for label in selected_labels:
+                batch_idxs = batch_idxs_dict[label].pop(0)
+                batch.extend(batch_idxs)
+                if len(batch_idxs_dict[label]) == 0:
+                    avai_labels.remove(label)
+            yield batch

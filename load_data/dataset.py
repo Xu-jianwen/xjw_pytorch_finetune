@@ -16,6 +16,10 @@ def build_transforms(mode="RGB", is_train=True):
         normalize_transform = T.Normalize(
             mean=[0.5, 0.5, 0.5], std=3 * [1.0 / 255]
         )
+    elif mode == "xcp":
+        normalize_transform = T.Normalize(
+            mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]
+        )    
     else:
         normalize_transform = T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     
@@ -72,7 +76,7 @@ class BaseDataSet(data.Dataset):
     def _load_data(self):
         with open(self.img_source, "r") as f:
             for line in f:
-                _path, _label = re.split(r",", line.strip())
+                _path, _label = re.split(r",| ", line.strip())
                 self.path_list.append(_path)
                 self.label_list.append(_label)
 
